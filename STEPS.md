@@ -15,7 +15,7 @@ npm install
 
 This will create the project in the AWS.
 
-> ❗️ You can find the `bootstrap-template.yaml` file inside the project.
+> ❗️ You can find the `bootstrap-template.yml` file inside the project.
 
 ```
 cdk bootstrap --template bootstrap-template.yaml 
@@ -84,9 +84,121 @@ import { FakeTubeDatabaseStack } from '../lib/fake_tube_database-stack';
 
 2. Instantiate `FaKeTubeDatabaseStack` before our `FakeTubeApiStack`
 
+Replace content of `bin/fake_tube.ts` with the following:
+
 ```ts
-new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack')
+#!/usr/bin / env node
+import 'source-map-support/register';
+import * as cdk from 'aws-cdk-lib';
+import { FakeTubeApiStack } from '../lib/fake_tube_api-stack';
+import { FakeTubeDatabaseStack } from '../lib/fake_tube_database-stack';
+
+const defaultStackSynthesizer = new cdk.DefaultStackSynthesizer({
+  // Name of the S3 bucket for file assets
+  fileAssetsBucketName:
+    "cdk-${Qualifier}-assets-${AWS::AccountId}-${AWS::Region}",
+  bucketPrefix: "",
+
+
+  // Name of the ECR repository for Docker image assets
+  imageAssetsRepositoryName:
+    "cdk-${Qualifier}-container-assets-${AWS::AccountId}-${AWS::Region}",
+
+
+  // ARN of the role assumed by the CLI and Pipeline to deploy here
+  deployRoleArn: "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+  deployRoleExternalId: "",
+
+
+  // ARN of the role used for file asset publishing (assumed from the deploy role)
+  fileAssetPublishingRoleArn:
+    "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+  fileAssetPublishingExternalId: "",
+
+
+  // ARN of the role used for Docker asset publishing (assumed from the deploy role)
+  imageAssetPublishingRoleArn:
+    "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+  imageAssetPublishingExternalId: "",
+
+
+  // ARN of the role passed to CloudFormation to execute the deployments
+  cloudFormationExecutionRole:
+    "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+
+
+  // ARN of the role used to look up context information in an environment
+  lookupRoleArn: "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+  lookupRoleExternalId: "",
+
+
+  // Name of the SSM parameter which describes the bootstrap stack version number
+  bootstrapStackVersionSsmParameter: "/cdk-bootstrap/${Qualifier}/version",
+
+
+  // Add a rule to every template which verifies the required bootstrap stack version
+  generateBootstrapVersionRule: true,
+});
+
+const defaultStackSynthesizer2 = new cdk.DefaultStackSynthesizer({
+  // Name of the S3 bucket for file assets
+  fileAssetsBucketName:
+    "cdk-${Qualifier}-assets-${AWS::AccountId}-${AWS::Region}",
+  bucketPrefix: "",
+
+
+  // Name of the ECR repository for Docker image assets
+  imageAssetsRepositoryName:
+    "cdk-${Qualifier}-container-assets-${AWS::AccountId}-${AWS::Region}",
+
+
+  // ARN of the role assumed by the CLI and Pipeline to deploy here
+  deployRoleArn: "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+  deployRoleExternalId: "",
+
+
+  // ARN of the role used for file asset publishing (assumed from the deploy role)
+  fileAssetPublishingRoleArn:
+    "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+  fileAssetPublishingExternalId: "",
+
+
+  // ARN of the role used for Docker asset publishing (assumed from the deploy role)
+  imageAssetPublishingRoleArn:
+    "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+  imageAssetPublishingExternalId: "",
+
+
+  // ARN of the role passed to CloudFormation to execute the deployments
+  cloudFormationExecutionRole:
+    "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+
+
+  // ARN of the role used to look up context information in an environment
+  lookupRoleArn: "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/LabRole",
+  lookupRoleExternalId: "",
+
+
+  // Name of the SSM parameter which describes the bootstrap stack version number
+  bootstrapStackVersionSsmParameter: "/cdk-bootstrap/${Qualifier}/version",
+
+
+  // Add a rule to every template which verifies the required bootstrap stack version
+  generateBootstrapVersionRule: true,
+});
+
+const app = new cdk.App();
+
+new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack', {
+  synthesizer: defaultStackSynthesizer2,
+})
+
+new FakeTubeApiStack(app, 'FakeTubeApiStack', {
+  synthesizer: defaultStackSynthesizer,
+});
 ```
+
+> ℹ️ Stack synthesizers are just a fix for our Learners lab environments.
 
 ## Deploy
 
@@ -269,12 +381,11 @@ Now we just need to inject table name into our handler. In the `lib/fake_tube_ap
     const handler = new nodejsLambda.NodejsFunction(this, "VideoHandler", {
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: 'resources/videos.ts',
+      role: iam.Role.fromRoleName(this, "LabRole", "LabRole"),
 +     environment: {
-+       VIDEOS_TABLE_NAME: props.table.tableName
++      VIDEOS_TABLE_NAME: props.table.tableName
 +     }
     });
-
-+   props.table.grantReadWriteData(handler); // grant access
 ```
 
 3. Inject `table` into the `FakeTubeApiStack`
@@ -285,12 +396,14 @@ Refactor `bin/fake_tube.ts` to inject table:
 const app = new cdk.App();
 
 -new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack')
-+const databaseStack = new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack')
++const databseStack = new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack', {
+  synthesizer: defaultStackSynthesizer2,
+})
 
--new FakeTubeApiStack(app, 'FakeTubeApiStack');
-+new FakeTubeApiStack(app, 'FakeTubeApiStack', {
-+  table: databaseStack.table
-+});
+new FakeTubeApiStack(app, 'FakeTubeApiStack', {
+  synthesizer: defaultStackSynthesizer,
++ table: databseStack.table
+});
 ```
 
 4. Use injected table name
