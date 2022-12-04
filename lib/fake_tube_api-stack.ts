@@ -3,12 +3,14 @@ import { Construct } from 'constructs';
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as nodejsLambda from "aws-cdk-lib/aws-lambda-nodejs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export class FakeTubeApiStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     const api = new apigateway.RestApi(this, "videos-api", {
+      cloudWatchRole: false, // Needed as hack for AWS Academy, usually you don't need to specify that
       restApiName: "Videos API Service",
       description: "This service serves videos."
     });
@@ -16,6 +18,7 @@ export class FakeTubeApiStack extends Stack {
     const handler = new nodejsLambda.NodejsFunction(this, "VideoHandler", {
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: 'resources/videos.ts',
+      role: iam.Role.fromRoleName(this, "LabRole", "LabRole"),
     });
 
     const videosResource = api.root.addResource('videos');

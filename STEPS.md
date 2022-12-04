@@ -15,7 +15,7 @@ npm install
 
 This will create the project in the AWS.
 
-> ❗️ You can find the `bootstrap-template.yaml` file inside the project.
+> ❗️ You can find the `bootstrap-template.yml` file inside the project.
 
 ```
 cdk bootstrap --template bootstrap-template.yaml 
@@ -84,8 +84,16 @@ import { FakeTubeDatabaseStack } from '../lib/fake_tube_database-stack';
 
 2. Instantiate `FaKeTubeDatabaseStack` before our `FakeTubeApiStack`
 
-```ts
-new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack')
+```diff
+const app = new cdk.App();
+
++new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack', {
++  synthesizer: defaultStackSynthesizer,
++})
+
+new FakeTubeApiStack(app, 'FakeTubeApiStack', {
+  synthesizer: defaultStackSynthesizer,
+});
 ```
 
 ## Deploy
