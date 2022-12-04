@@ -381,12 +381,11 @@ Now we just need to inject table name into our handler. In the `lib/fake_tube_ap
     const handler = new nodejsLambda.NodejsFunction(this, "VideoHandler", {
       runtime: lambda.Runtime.NODEJS_14_X,
       entry: 'resources/videos.ts',
+      role: iam.Role.fromRoleName(this, "LabRole", "LabRole"),
 +     environment: {
-+       VIDEOS_TABLE_NAME: props.table.tableName
++      VIDEOS_TABLE_NAME: props.table.tableName
 +     }
     });
-
-+   props.table.grantReadWriteData(handler); // grant access
 ```
 
 3. Inject `table` into the `FakeTubeApiStack`
