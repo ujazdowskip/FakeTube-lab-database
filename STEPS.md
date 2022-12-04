@@ -396,12 +396,14 @@ Refactor `bin/fake_tube.ts` to inject table:
 const app = new cdk.App();
 
 -new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack')
-+const databaseStack = new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack')
++const databseStack = new FakeTubeDatabaseStack(app, 'FakeTubeDatabaseStack', {
+  synthesizer: defaultStackSynthesizer2,
+})
 
--new FakeTubeApiStack(app, 'FakeTubeApiStack');
-+new FakeTubeApiStack(app, 'FakeTubeApiStack', {
-+  table: databaseStack.table
-+});
+new FakeTubeApiStack(app, 'FakeTubeApiStack', {
+  synthesizer: defaultStackSynthesizer,
++ table: databseStack.table
+});
 ```
 
 4. Use injected table name
